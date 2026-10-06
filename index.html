@@ -803,7 +803,7 @@
       outline: none;
       font-family: inherit;
       transition: .25s;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       font-weight: 600;
     }
 
@@ -815,6 +815,91 @@
       border-color: rgba(167, 139, 250, .55);
       background: rgba(167, 139, 250, .08);
       box-shadow: 0 0 0 4px rgba(167, 139, 250, .1)
+    }
+
+    /* ---------- 日期选择器 ---------- */
+    .date-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      background: rgba(255, 255, 255, .045);
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: 14px;
+      transition: .25s;
+    }
+
+    .date-row:focus-within {
+      border-color: rgba(167, 139, 250, .55);
+      background: rgba(167, 139, 250, .08);
+      box-shadow: 0 0 0 4px rgba(167, 139, 250, .1);
+    }
+
+    .dp-icon {
+      font-size: 14px;
+      flex: none;
+      opacity: .9;
+      line-height: 1
+    }
+
+    .date-input {
+      flex: 1;
+      min-width: 0;
+      background: none;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-family: inherit;
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      color-scheme: dark;
+      padding: 0;
+    }
+
+    .date-input::-webkit-calendar-picker-indicator {
+      cursor: pointer;
+      opacity: .7;
+      transition: .2s;
+    }
+
+    .date-input::-webkit-calendar-picker-indicator:hover {
+      opacity: 1
+    }
+
+    .qd-group {
+      display: flex;
+      gap: 5px;
+      flex: none
+    }
+
+    .qd {
+      background: rgba(255, 255, 255, .07);
+      border: 1px solid rgba(255, 255, 255, .1);
+      color: #c4c4dc;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 5px 10px;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: .22s;
+      font-family: inherit;
+      letter-spacing: .3px;
+      white-space: nowrap;
+    }
+
+    .qd:hover {
+      background: rgba(167, 139, 250, .22);
+      color: #fff;
+      border-color: rgba(167, 139, 250, .45)
+    }
+
+    .qd.on {
+      background: linear-gradient(110deg, rgba(167, 139, 250, .4), rgba(34, 211, 238, .3));
+      color: #fff;
+      border-color: rgba(167, 139, 250, .6);
+      box-shadow: 0 4px 14px -6px rgba(167, 139, 250, .8);
     }
 
     .add-btn {
@@ -1122,6 +1207,20 @@
       color: #b4b4d0;
       margin-top: 2px;
       font-weight: 600
+    }
+
+    .backfill-tag {
+      display: inline-block;
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: .5px;
+      background: linear-gradient(100deg, rgba(251, 146, 60, .28), rgba(244, 114, 182, .22));
+      color: #ffcb9b;
+      border: 1px solid rgba(251, 146, 60, .35);
+      padding: 1px 6px;
+      border-radius: 6px;
+      margin-left: 6px;
+      vertical-align: 1px;
     }
 
     .amt {
@@ -1492,6 +1591,17 @@
 
           <div class="cats" id="cats"></div>
           <input class="note" id="note" maxlength="24" placeholder="备注（可选）">
+
+          <div class="date-row">
+            <span class="dp-icon">📅</span>
+            <input type="date" id="recordDate" class="date-input">
+            <div class="qd-group" id="qdGroup">
+              <button class="qd" data-days="0">今天</button>
+              <button class="qd" data-days="1">昨天</button>
+              <button class="qd" data-days="2">前天</button>
+            </div>
+          </div>
+
           <button class="add-btn" id="addBtn">记 录 一 笔</button>
         </section>
       </div>
@@ -1542,6 +1652,11 @@
 
       <div class="cats" id="editCats" style="margin-top:14px"></div>
       <input class="note" id="editNote" maxlength="24" placeholder="备注（可选）">
+
+      <div class="date-row">
+        <span class="dp-icon">📅</span>
+        <input type="date" id="editDate" class="date-input">
+      </div>
 
       <div class="modal-actions">
         <button class="btn-danger" id="editDelete">删 除</button>
@@ -1598,7 +1713,7 @@
     const ALL_CATS = [...CATS.expense, ...CATS.income];
     const catOf = id => ALL_CATS.find(c => c.id === id) || CATS.expense[CATS.expense.length - 1];
 
-    const KEY = 'flow_records_v3';
+    const KEY = 'flow_records_v4';
     let state = loadState();
     let currentType = 'expense';
     let selectedCat = CATS.expense[0].id;
@@ -1606,6 +1721,7 @@
     function loadState() {
       try {
         const d = JSON.parse(localStorage.getItem(KEY))
+          || JSON.parse(localStorage.getItem('flow_records_v3'))
           || JSON.parse(localStorage.getItem('flow_records_v2'))
           || JSON.parse(localStorage.getItem('flow_records_v1'));
         if (d && Array.isArray(d.items)) {
@@ -1623,8 +1739,21 @@
     /* ============ 工具 ============ */
     const pad = n => String(n).padStart(2, '0');
     const dayKey = ts => { const d = new Date(ts); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+    const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
     const fmtMoney = n => n.toLocaleString('en-MY', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
     const esc = s => String(s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+
+    /**
+     * 把选中的日期字符串 + 参考时间 → 时间戳
+     * 如果选中日期不是今天，会用参考时间（时/分/秒）覆盖过去日期的时分秒
+     */
+    function buildTimestamp(dateStr, refDate) {
+      const ref = refDate || new Date();
+      if (!dateStr) return ref.getTime();
+      const [y, m, d] = dateStr.split('-').map(Number);
+      if (isNaN(y) || isNaN(m) || isNaN(d)) return ref.getTime();
+      return new Date(y, m - 1, d, ref.getHours(), ref.getMinutes(), ref.getSeconds()).getTime();
+    }
 
     /* 数字滚动 */
     function tween(el, to, dur = 700) {
@@ -1694,6 +1823,7 @@
     const donut = $('donut'), donutVal = $('donutVal'), legend = $('legend');
     const bars = $('bars'), list = $('list'), countEl = $('count');
     const catsEl = $('cats'), typeSwitch = $('typeSwitch');
+    const recordDateInput = $('recordDate');
 
     /* ============ 日期显示 ============ */
     (function initDate() {
@@ -1701,6 +1831,38 @@
       const w = '日一二三四五六'[d.getDay()];
       $('dateStr').textContent = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 星期${w}`;
     })();
+
+    /* ============ 日期选择器（新增） ============ */
+    function initDatePicker() {
+      const t = todayKey();
+      recordDateInput.value = t;
+      recordDateInput.max = t;
+      updateQuickDates();
+    }
+
+    function updateQuickDates() {
+      const v = recordDateInput.value;
+      document.querySelectorAll('#qdGroup .qd').forEach(btn => {
+        const days = parseInt(btn.dataset.days);
+        const d = new Date();
+        d.setDate(d.getDate() - days);
+        const k = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        btn.classList.toggle('on', k === v);
+      });
+    }
+
+    document.getElementById('qdGroup').addEventListener('click', e => {
+      const btn = e.target.closest('.qd');
+      if (!btn) return;
+      const days = parseInt(btn.dataset.days);
+      const d = new Date();
+      d.setDate(d.getDate() - days);
+      recordDateInput.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      updateQuickDates();
+    });
+
+    recordDateInput.addEventListener('change', updateQuickDates);
+    recordDateInput.addEventListener('input', updateQuickDates);
 
     /* ============ 分类渲染（主页） ============ */
     function renderCats() {
@@ -1771,7 +1933,7 @@
       todayIncomeEl.textContent = '+RM ' + fmtMoney(todayIncome);
       tween(monthTotalEl, monthExpense);
 
-      /* 月度三项 —— 用固定元素引用，避免重新赋值 */
+      /* 月度三项 */
       tween(monthIncomeEl, monthIncome);
       tween(monthExpenseEl, monthExpense);
       tween(monthBalanceEl, Math.abs(balance));
@@ -1876,6 +2038,7 @@
         return;
       }
 
+      const nowTs = Date.now();
       list.innerHTML = items.map(it => {
         const c = catOf(it.cat);
         const isIncome = it.type === 'income';
@@ -1883,10 +2046,11 @@
         const time = `${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
         const sign = isIncome ? '+' : '−';
         const typeName = isIncome ? '收入' : '支出';
+        const isBackfill = dayKey(it.ts) !== todayK;
         return `<div class="item${it.id === newId ? ' pop' : ''}" data-id="${it.id}">
       <div class="ic" style="--c:${c.color}">${c.icon}</div>
       <div class="mid">
-        <div class="nm">${esc(it.note) || c.name}</div>
+        <div class="nm">${esc(it.note) || c.name}${isBackfill ? '<span class="backfill-tag">补</span>' : ''}</div>
         <div class="tm">${typeName} · ${c.name} · ${time}</div>
       </div>
       <div class="amt ${isIncome ? 'income' : 'expense'}">${sign}RM ${fmtMoney(it.amount)}</div>
@@ -1926,6 +2090,7 @@
     const editCats = $('editCats');
     const editAmount = $('editAmount');
     const editNote = $('editNote');
+    const editDate = $('editDate');
     let editingId = null;
     let editType = 'expense';
     let editCat = 'food';
@@ -1950,7 +2115,7 @@
       const btn = e.target.closest('.type-btn');
       if (!btn) return;
       editType = btn.dataset.type;
-      editTypeSwitch.querySelectorAll('.type-btn').forEach(b => b.classList.toggle('on', b === btn));
+      editTypeSwitch.querySelectorAll('.type-btn').forEach(b => b.classList.toggle('on', b.dataset.type === editType));
       editCat = CATS[editType][0].id;
       renderEditCats();
     });
@@ -1963,6 +2128,12 @@
       editCat = item.cat;
       editAmount.value = item.amount;
       editNote.value = item.note || '';
+
+      /* 设置编辑日期 */
+      const d = new Date(item.ts);
+      editDate.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      editDate.max = todayKey();
+
       editTypeSwitch.querySelectorAll('.type-btn').forEach(b => b.classList.toggle('on', b.dataset.type === editType));
       renderEditCats();
       editOverlay.classList.add('show');
@@ -1983,6 +2154,11 @@
       item.cat = editCat;
       item.note = editNote.value.trim();
       item.type = editType;
+
+      /* 更新日期（保留原记录的时/分/秒） */
+      const refDate = new Date(item.ts);
+      item.ts = buildTimestamp(editDate.value, refDate);
+
       saveState();
       closeEdit();
       render(item.id);
@@ -2054,12 +2230,16 @@
         return;
       }
 
+      /* 用选中的日期构造时间戳（如果是今天则用当前时间，否则用当前时分秒 + 选中日期） */
+      const dateStr = recordDateInput.value || todayKey();
+      const ts = buildTimestamp(dateStr, new Date());
+
       const item = {
         id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
         amount: Math.round(val * 100) / 100,
         cat: selectedCat,
         note: noteInput.value.trim(),
-        ts: Date.now(),
+        ts,
         type: currentType
       };
 
@@ -2068,6 +2248,9 @@
 
       amountInput.value = '';
       noteInput.value = '';
+      /* 记录后把日期重置回今天 */
+      recordDateInput.value = todayKey();
+      updateQuickDates();
 
       const r = addBtn.getBoundingClientRect();
       burst(
@@ -2090,6 +2273,7 @@
     amountInput.addEventListener('input', () => filterAmount(amountInput));
 
     /* ============ 启动 ============ */
+    initDatePicker();
     render();
 
     /* 跨天自动刷新 */
@@ -2097,6 +2281,12 @@
       const d = new Date();
       const w = '日一二三四五六'[d.getDay()];
       $('dateStr').textContent = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 星期${w}`;
+      const t = todayKey();
+      recordDateInput.max = t;
+      editDate.max = t;
+      if (recordDateInput.value > t) recordDateInput.value = t;
+      if (editDate.value > t) editDate.value = t;
+      updateQuickDates();
       render();
     }, 60000);
   </script>
